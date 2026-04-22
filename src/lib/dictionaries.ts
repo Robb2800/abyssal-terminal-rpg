@@ -25,17 +25,17 @@ export const ASCII_ART = {
     |__________|
   `,
   GAMEOVER: `
-   _____  _______  __  __ ______ 
+   _____  _______  __  __ ______
   / ____||  ___  ||  \\/  ||  ____|
- | |  __ | |   | || \\  / || |__   
- | | |_ || |   | || |\\/| ||  __|  
- | |__| || |___| || |  | || |____ 
+ | |  __ | |   | || \\  / || |__
+ | | |_ || |   | || |\\/| ||  __|
+ | |__| || |___| || |  | || |____
   \\_____||_______||_|  |_||______|
-   ____  __      __ ______  _____  
-  / __ \\ \\ \\    / /|  ____||  __ \\ 
+   ____  __      __ ______  _____
+  / __ \\ \\ \\    / /|  ____||  __ \\
  | |  | | \\ \\  / / | |__   | |__) |
- | |  | |  \\ \\/ /  |  __|  |  _  / 
- | |__| |   \\  /   | |____ | | \\ \\ 
+ | |  | |  \\ \\/ /  |  __|  |  _  /
+ | |__| |   \\  /   | |____ | | \\ \\
   \\____/     \\/    |______||_|  \\_\\
   `,
   VOID: `
@@ -63,6 +63,23 @@ export const THEMES: Record<GameTheme, { enemies: string[], rooms: string[] }> =
     rooms: ['A space where logic fails.', 'Infinite darkness in all directions.', 'White noise echoing through your soul.', 'Nothingness that feels heavy.']
   }
 };
+export const ENEMY_MOVES: Record<string, string[]> = {
+  'Paper-Cut Wraith': ['Serrated Slice', 'Ink Blight', 'Ghostly Shiver'],
+  'Ink-Stained Golem': ['Heavy Slam', 'Staining Grasp', 'Paper Weight'],
+  'Stalactite Spider': ['Venom Drip', 'Web Trap', 'Ceiling Drop'],
+  'Echoing Shadow': ['Sonic Screech', 'Mimic Strike', 'Dark Pulse'],
+  'Rust-Iron Jailer': ['Chain Lash', 'Iron Lockdown', 'Rusty Puncture'],
+  'Entropy Fractal': ['Geometric Void', 'Logic Loop', 'Chaos Beam'],
+  'Null Pointer': ['Reference Error', 'Memory Leak', 'Stack Overflow']
+};
+export const LORE_FRAGMENTS = [
+  "The walls hum with a frequency that makes your teeth ache.",
+  "You find a scrap of a map. It shows no exit, only deeper levels.",
+  "A faint carving in the stone reads: 'The light was a lie.'",
+  "The shadows here don't follow the flicker of your torch.",
+  "You feel the weight of a thousand dead eyes watching your every step.",
+  "A rusted coin from an empire that never existed lies in the dust."
+];
 export const getThemeData = (themeStr: string): GameTheme => {
   const lower = themeStr.toLowerCase();
   if (lower.includes('book') || lower.includes('library') || lower.includes('read')) return 'library';
