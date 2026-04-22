@@ -18,7 +18,7 @@ interface Encounter {
   nextMove: string;
   revealed: boolean;
   intent: keyof typeof INTENT_TYPES;
-  futureMoves?: string[];
+  futureMoves?: (keyof typeof INTENT_TYPES)[];
 }
 interface GameState {
   status: GameStatus;
@@ -85,7 +85,7 @@ const createProceduralGrid = (revealAll = false): GridCell[][] => {
         type = 'event';
         eventId = NARRATIVE_EVENTS[Math.floor(Math.random() * NARRATIVE_EVENTS.length)].id;
       }
-      row.push({ type, explored: revealAll && (type === 'event' || type === 'boss'), eventId });
+      row.push({ type, explored: revealAll && (type === 'event'), eventId });
     }
     grid.push(row);
   }
@@ -200,20 +200,20 @@ export const useGameStore = create<GameState>((set, get) => ({
         dmg += 3;
         addLog(`> ALLY: THE AUTOMATON FIRES A BOLT!`);
       }
-      // Boss Logic
+      let nextHp = currentEncounter.hp;
       if (currentEncounter.name === 'ABYSSAL OVERSEER') {
         if (bossPhase === 1) {
           const heal = Math.floor(dmg * 0.1);
-          set({ currentEncounter: { ...currentEncounter, hp: Math.min(currentEncounter.maxHp, currentEncounter.hp - dmg + heal) } });
+          nextHp = Math.min(currentEncounter.maxHp, currentEncounter.hp - dmg + heal);
           addLog(`! BOSS: SIPHON ACTIVE! OVERSEER HEALS ${heal} FROM YOUR STRIKE.`);
         } else {
-          set({ currentEncounter: { ...currentEncounter, hp: currentEncounter.hp - dmg } });
+          nextHp = currentEncounter.hp - dmg;
         }
       } else {
-        set({ currentEncounter: { ...currentEncounter, hp: currentEncounter.hp - dmg } });
+        nextHp = currentEncounter.hp - dmg;
       }
-      const updatedEncounter = get().currentEncounter;
-      if (!updatedEncounter) return;
+      const updatedEncounter = { ...currentEncounter, hp: nextHp };
+      set({ currentEncounter: updatedEncounter });
       if (updatedEncounter.hp <= 0) {
         const isBoss = updatedEncounter.name === 'ABYSSAL OVERSEER';
         addLog(`* VICTORY: ${updatedEncounter.name} DISSOLVES.`);
@@ -225,7 +225,6 @@ export const useGameStore = create<GameState>((set, get) => ({
           playerMaxHp: origin === 'exile' ? playerMaxHp + 2 : playerMaxHp
         });
       } else {
-        // Boss Phase Transition check
         if (updatedEncounter.name === 'ABYSSAL OVERSEER') {
           const hpPct = (updatedEncounter.hp / updatedEncounter.maxHp) * 100;
           if (hpPct <= 10) {
@@ -244,8 +243,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (newHp <= 0) {
           set({ status: 'GAMEOVER', playerHp: 0, currentAscii: ASCII_ART.GAMEOVER });
         } else {
-          set({ 
-            playerHp: newHp, 
+          set({
+            playerHp: newHp,
             defenseActive: false,
             currentEncounter: { ...updatedEncounter, intent: generateIntent(), nextMove: ENEMY_MOVES[updatedEncounter.name]?.[Math.floor(Math.random() * 3)] || 'Strike' }
           });
@@ -254,14 +253,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
   useRelic: () => {
-    const { origin, relicCooldown, currentEncounter, addLog, position, floor, grid } = get();
+    const { origin, relicCooldown, currentEncounter, addLog, position, grid } = get();
     if (relicCooldown > 0) return;
     if (origin === 'collector') {
       if (currentEncounter) return;
-      const newGrid = grid.map((row, y) => row.map((cell, x) => {
+      const newGrid = grid.map((row, y) => row.map((cell, x): GridCell => {
         if (x === position.x && y === position.y) {
           const rng = Math.random();
-          return { ...cell, type: rng < 0.5 ? 'treasure' : 'empty' };
+          return { ...cell, type: (rng < 0.5 ? 'treasure' : 'empty') as GridCell["type"] };
         }
         return cell;
       }));
@@ -273,13 +272,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       addLog(`+ RELIC: THE CROWN COMMANDS SILENCE. ENEMY STUNNED.`);
     } else if (origin === 'seeker') {
       if (!currentEncounter) return;
-      set({ 
-        currentEncounter: { 
-          ...currentEncounter, 
-          revealed: true, 
-          futureMoves: [generateIntent(), generateIntent(), generateIntent()] 
-        }, 
-        relicCooldown: 2 
+      set({
+        currentEncounter: {
+          ...currentEncounter,
+          revealed: true,
+          futureMoves: [generateIntent(), generateIntent(), generateIntent()]
+        },
+        relicCooldown: 2
       });
       addLog(`+ RELIC: THE LENS REVEALS THE THREADS OF CAUSALITY.`);
     }
@@ -309,7 +308,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     get().addLog(`+ DECISION: ${choice.consequence}`);
   },
   defend: () => set({ defenseActive: true }),
-  useSkill: (id) => {}, // Logic omitted for brevity, similar to previous phase but with mana checks
+  useSkill: (id) => {},
   rest: () => {
     const { restUsedOnFloor, playerHp, playerMaxHp } = get();
     if (restUsedOnFloor) return;

@@ -3,6 +3,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Skull } from 'lucide-react';
 import { ORIGINS } from '@/lib/dictionaries';
+import { cn } from "@/lib/utils";
 export function Console() {
   const logs = useGameStore(s => s.logs);
   const currentEncounter = useGameStore(s => s.currentEncounter);

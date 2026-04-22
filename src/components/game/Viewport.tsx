@@ -105,7 +105,7 @@ export function Viewport() {
               <span className={cn(INTENT_TYPES[currentEncounter.intent].color, "animate-pulse")}>
                 NEXT: [{currentEncounter.nextMove.toUpperCase()}]
               </span>
-              <span className="opacity-60">{currentEncounter.revealed ? `HP: ${currentEncounter.hp}/${updatedEncounter?.maxHp ?? '?'}` : 'HP: ???'}</span>
+              <span className="opacity-60">{currentEncounter.revealed ? `HP: ${currentEncounter.hp}/${currentEncounter.maxHp}` : 'HP: ???'}</span>
             </div>
             {currentEncounter.futureMoves && (
               <div className="mt-2 grid grid-cols-3 gap-2">
