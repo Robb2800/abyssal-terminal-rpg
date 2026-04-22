@@ -120,8 +120,8 @@ export const ORIGINS: Record<OriginType, {
     desc: 'I seek a reckoning for the debts unpaid by the stars.',
     item: 'Golden Compass',
     bonus: '+1 STR, Wealth Sense',
-    passive: 'Sense the Abyssal Core: Revealed mini-map icons.',
-    active: 'Market Re-Roll: Refresh current sector (1/floor).',
+    passive: 'Sense the Abyssal Core: Reveals map layout.',
+    active: 'Market Re-Roll: Refresh current sector (4-move CD).',
     statBonus: { strength: 1, manaRegen: 1 }
   },
   exile: {
@@ -130,7 +130,7 @@ export const ORIGINS: Record<OriginType, {
     item: 'Sharpened Crown',
     bonus: '+1 AGI, Regal Presence',
     passive: 'Eternal Reign: +2 Max HP per kill.',
-    active: 'Commanding Presence: Stun foe for 1 turn (3-turn CD).',
+    active: 'Commanding Presence: Stun foe for 1 turn (5-move CD).',
     statBonus: { agility: 1, manaRegen: 1 }
   },
   seeker: {
@@ -138,8 +138,8 @@ export const ORIGINS: Record<OriginType, {
     desc: 'I seek the fundamental truth hidden in the static.',
     item: 'Ancient Lens',
     bonus: '+2 MP Regen, True Sight',
-    passive: 'Hyper-Analysis: Searching sectors always succeeds.',
-    active: 'Quantum Sight: Reveal enemy HP and future moves.',
+    passive: 'Hyper-Analysis: Free searching. Higher Mana capacity.',
+    active: 'Quantum Sight: Reveal enemy HP and future moves (3-move CD).',
     statBonus: { manaRegen: 2 }
   }
 };
@@ -159,35 +159,35 @@ export const ENDINGS = {
   THRONE: {
     title: 'THE NEW OVERSEER',
     ascii: ASCII_ART.BOSS,
-    prose: 'You take the throne. The terminal flickers as your consciousness merges with the grid. The cycle continues, but you are now the one who watches.'
+    prose: 'You take the throne. The terminal flickers as your consciousness merges with the grid. The cycle continues, but you are now the one who watches. The Market Maker is reborn in your image.'
   },
   DESTRUCTION: {
     title: 'THE END OF THE GRID',
     ascii: ASCII_ART.VOID,
-    prose: 'The heart of the Market Maker shatters. The terminal screams as its reality dissolves into true void. You are free, even if there is nothing left to inhabit.'
+    prose: 'The heart of the Market Maker shatters. The terminal screams as its reality dissolves into true void. You are free, even if there is nothing left to inhabit. The static finally goes quiet.'
   },
   ESCAPE: {
     title: 'THE TRUE EXIT',
     ascii: ASCII_ART.DOORWAY,
-    prose: 'Your relic reveals a frequency beyond the static. You step through a door that was never there. The terminal is just a memory now. You have ascended.'
+    prose: 'Your relic reveals a frequency beyond the static. You step through a door that was never there. The terminal is just a memory now. You have ascended to a reality where the Abyssal Terminal is but a toy.'
   }
 };
 export const NARRATIVE_EVENTS: NarrativeEvent[] = [
   {
     id: 'automaton',
     title: 'THE WOUNDED AUTOMATON',
-    prose: 'A brass-plated construct lies slumped against a pillar, sparking with arcane energy. Its optic sensor flickers with a desperate blue light.',
+    prose: 'A brass-plated construct lies slumped against a pillar, sparking with arcane energy. Its optic sensor flickers with a desperate blue light, projecting a plea in a language of clicks and whirs.',
     choices: [
       {
         id: 'take_core',
-        text: 'EXTRACT POWER CORE',
-        consequence: 'Gain +5 Strength, but the room is forever CURSED.',
-        effect: (s) => ({ strength: s.strength + 5, inventory: [...s.inventory, 'Cracked Core'] })
+        text: 'EXTRACT CORE',
+        consequence: '+5 STR / -5 MAX HP',
+        effect: (s) => ({ strength: s.strength + 5, playerMaxHp: Math.max(10, s.playerMaxHp - 5), playerHp: Math.min(s.playerHp, s.playerMaxHp - 5) })
       },
       {
         id: 'repair',
-        text: 'REPAIR CIRCUITRY (-10 MP)',
-        consequence: 'The Automaton joins you as an ally.',
+        text: 'REPAIR UNIT (-10 MP)',
+        consequence: 'AUTOMATON JOINS YOU',
         effect: (s) => ({ mana: Math.max(0, s.mana - 10), allies: { ...s.allies, automaton: true } })
       }
     ]
@@ -195,19 +195,19 @@ export const NARRATIVE_EVENTS: NarrativeEvent[] = [
   {
     id: 'shrine',
     title: 'VOID SHRINE',
-    prose: 'An altar of black glass pulses with the rhythm of a slow-beating heart. It demands a sacrifice of memory or flesh.',
+    prose: 'An altar of black glass pulses with the rhythm of a slow-beating heart. It demands a sacrifice of memory or flesh in exchange for the secrets of the void.',
     choices: [
       {
         id: 'sacrifice_blood',
         text: 'OFFER VITALITY (-5 HP)',
-        consequence: 'Gain permanent +5 Max Mana.',
-        effect: (s) => ({ playerHp: Math.max(1, s.playerHp - 5), maxMana: s.maxMana + 5 })
+        consequence: '+10 MAX MANA',
+        effect: (s) => ({ playerHp: Math.max(1, s.playerHp - 5), maxMana: s.maxMana + 10 })
       },
       {
         id: 'sacrifice_mana',
         text: 'OFFER ESSENCE (-5 MP)',
-        consequence: 'Gain permanent +2 Agility.',
-        effect: (s) => ({ mana: Math.max(0, s.mana - 5), agility: s.agility + 2 })
+        consequence: '+3 AGILITY',
+        effect: (s) => ({ mana: Math.max(0, s.mana - 5), agility: s.agility + 3 })
       }
     ]
   }

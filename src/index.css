@@ -13,17 +13,17 @@
     --radius: 0px;
   }
   body {
-    @apply bg-black text-[#39ff14] overflow-hidden;
+    @apply bg-black text-[#39ff14] overflow-hidden select-none;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     text-shadow: 0 0 2px rgba(57, 255, 20, 0.5);
   }
   /* Blocky Retro Scrollbar */
   ::-webkit-scrollbar {
-    width: 12px;
+    width: 8px;
   }
   ::-webkit-scrollbar-track {
     background: #050505;
-    border-left: 1px solid #39ff14;
+    border-left: 1px solid rgba(57, 255, 20, 0.1);
   }
   ::-webkit-scrollbar-thumb {
     background: #39ff14;
@@ -32,56 +32,63 @@
 }
 @layer components {
   .text-glow {
-    text-shadow: 0 0 5px #39ff14, 0 0 10px rgba(57, 255, 20, 0.5);
+    text-shadow: 0 0 8px #39ff14, 0 0 12px rgba(57, 255, 20, 0.3);
   }
   .crt-overlay {
     background: linear-gradient(
-      rgba(18, 16, 16, 0) 50%, 
-      rgba(0, 0, 0, 0.1) 50%
+      rgba(18, 16, 16, 0) 50%,
+      rgba(0, 0, 0, 0.15) 50%
     ), linear-gradient(
-      90deg, 
-      rgba(255, 0, 0, 0.03), 
-      rgba(0, 255, 0, 0.01), 
-      rgba(0, 0, 255, 0.03)
+      90deg,
+      rgba(255, 0, 0, 0.05),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.05)
     );
-    background-size: 100% 4px, 3px 100%;
-    pointer-events: none;
-    z-index: 100;
-  }
-  .crt-overlay::before {
-    content: " ";
-    display: block;
-    position: absolute;
-    top: 0; left: 0; bottom: 0; right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
-    z-index: 101;
-    background-size: 100% 2px, 3px 100%;
-    pointer-events: none;
+    background-size: 100% 3px, 2px 100%;
+    pointer-events: none !important;
+    z-index: 9999;
   }
   .scanline {
     width: 100%;
     height: 100px;
-    z-index: 102;
+    z-index: 10000;
     background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(57, 255, 20, 0.05) 50%, rgba(0, 0, 0, 0) 100%);
-    opacity: 0.1;
+    opacity: 0.15;
     position: absolute;
     bottom: 100%;
-    animation: scanline 8s linear infinite;
+    animation: scanline 10s linear infinite;
+    pointer-events: none !important;
+  }
+  .scanline-fast {
+    animation: scanline 2s linear infinite !important;
+    opacity: 0.3;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(220, 38, 38, 0.1) 50%, rgba(0, 0, 0, 0) 100%);
   }
   @keyframes scanline {
     0% { bottom: 100%; }
-    100% { bottom: -100px; }
+    100% { bottom: -120px; }
   }
   .flicker {
     animation: flicker 0.15s infinite;
   }
   @keyframes flicker {
     0% { opacity: 0.98; }
-    5% { opacity: 0.95; }
-    10% { opacity: 0.9; }
-    15% { opacity: 0.96; }
-    20% { opacity: 0.93; }
-    25% { opacity: 0.95; }
+    5% { opacity: 0.92; }
+    10% { opacity: 0.88; }
+    15% { opacity: 0.94; }
     100% { opacity: 1; }
+  }
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
+/* Custom extra-small breakpoint for ASCII */
+@media (max-width: 475px) {
+  .xs\:text-\[0\.45rem\] {
+    font-size: 0.45rem;
   }
 }
