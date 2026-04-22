@@ -1,138 +1,84 @@
-// Home page of the app.
-// Currently a demo placeholder "please wait" screen.
-// Replace this file with your actual app UI. Do not delete it to use some other file as homepage. Simply replace the entire contents of this file.
-
-import { useEffect, useMemo, useState } from 'react'
-import { Sparkles } from 'lucide-react'
-
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { HAS_TEMPLATE_DEMO, TemplateDemo } from '@/components/TemplateDemo'
-import { Button } from '@/components/ui/button'
-import { Toaster, toast } from '@/components/ui/sonner'
-
-function formatDuration(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${s.toString().padStart(2, '0')}`
-}
-
+import React from 'react';
+import { useGameStore } from '@/store/gameStore';
+import { CrtOverlay } from '@/components/game/CrtOverlay';
+import { Viewport } from '@/components/game/Viewport';
+import { Console } from '@/components/game/Console';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 export function HomePage() {
-  const [coins, setCoins] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
-  const [startedAt, setStartedAt] = useState<number | null>(null)
-  const [elapsedMs, setElapsedMs] = useState(0)
-
-  useEffect(() => {
-    if (!isRunning || startedAt === null) return
-
-    const t = setInterval(() => {
-      setElapsedMs(Date.now() - startedAt)
-    }, 250)
-
-    return () => clearInterval(t)
-  }, [isRunning, startedAt])
-
-  const formatted = useMemo(() => formatDuration(elapsedMs), [elapsedMs])
-
-  const onPleaseWait = () => {
-    setCoins((c) => c + 1)
-
-    if (!isRunning) {
-      // Resume from the current elapsed time
-      setStartedAt(Date.now() - elapsedMs)
-      setIsRunning(true)
-      toast.success('Building your app…', {
-        description: "Hang tight — we're setting everything up.",
-      })
-      return
-    }
-
-    setIsRunning(false)
-    toast.info('Still working…', {
-      description: 'You can come back in a moment.',
-    })
-  }
-
-  const onReset = () => {
-    setCoins(0)
-    setIsRunning(false)
-    setStartedAt(null)
-    setElapsedMs(0)
-    toast('Reset complete')
-  }
-
-  const onAddCoin = () => {
-    setCoins((c) => c + 1)
-    toast('Coin added')
-  }
-
+  const status = useGameStore(s => s.status);
+  const themeInput = useGameStore(s => s.themeInput);
+  const setThemeInput = useGameStore(s => s.setThemeInput);
+  const startGame = useGameStore(s => s.startGame);
+  const reset = useGameStore(s => s.reset);
+  const roomsCleared = useGameStore(s => s.roomsCleared);
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-4 overflow-hidden relative">
-      <ThemeToggle />
-      <div className="absolute inset-0 bg-gradient-rainbow opacity-10 dark:opacity-20 pointer-events-none" />
-
-      <div className="text-center space-y-8 relative z-10 animate-fade-in w-full">
-        <div className="flex justify-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-primary floating">
-            <Sparkles className="w-8 h-8 text-white rotating" />
+    <div className="min-h-screen h-screen flex flex-col bg-black text-[#39ff14] font-mono selection:bg-[#39ff14] selection:text-black overflow-hidden relative">
+      <CrtOverlay />
+      {status === 'START' && (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 z-10 space-y-8 animate-pulse-slow">
+          <div className="text-center space-y-4">
+            <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-glow flicker">
+              ABYSSAL<br />TERMINAL
+            </h1>
+            <p className="text-lg opacity-80">v1.0.4 - DARK FANTASY ENGINE</p>
+          </div>
+          <div className="max-w-md w-full space-y-6">
+            <div className="space-y-2 text-center">
+              <label className="text-sm">ENTER THE NATURE OF YOUR NIGHTMARE</label>
+              <Input 
+                value={themeInput}
+                onChange={(e) => setThemeInput(e.target.value)}
+                placeholder="HAUNTED LIBRARY / COLD CAVERN..."
+                className="bg-black border-2 border-[#39ff14] text-[#39ff14] placeholder:text-[#39ff14]/30 focus-visible:ring-0 rounded-none h-12 text-center"
+                onKeyDown={(e) => e.key === 'Enter' && startGame()}
+              />
+            </div>
+            <Button 
+              onClick={startGame}
+              className="w-full bg-[#39ff14] text-black hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] rounded-none h-16 text-xl font-bold transition-colors"
+            >
+              [ ENTER THE ABYSS ]
+            </Button>
+          </div>
+          <div className="text-2xs opacity-40 text-center uppercase tracking-widest">
+            (C) 1984 ABYSS-SOFT INDUSTRIES. ALL RIGHTS RESERVED.
           </div>
         </div>
-
-        <div className="space-y-3">
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-balance leading-tight">
-            Creating your <span className="text-gradient">app</span>
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto text-pretty">
-            Your application would be ready soon.
-          </p>
-        </div>
-
-        {HAS_TEMPLATE_DEMO ? (
-          <div className="max-w-5xl mx-auto text-left">
-            <TemplateDemo />
+      )}
+      {status === 'PLAYING' && (
+        <>
+          <Viewport />
+          <Console />
+        </>
+      )}
+      {status === 'GAMEOVER' && (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 z-10 space-y-12">
+          <div className="text-center space-y-6">
+            <div className="text-[#39ff14] text-glow whitespace-pre font-bold text-xs md:text-sm animate-bounce">
+              {`
+   _____  _______  __  __ ______ 
+  / ____||  ___  ||  \\/  ||  ____|
+ | |  __ | |   | || \\  / || |__   
+ | | |_ || |   | || |\\/| ||  __|  
+ | |__| || |___| || |  | || |____ 
+  \\_____||_______||_|  |_||______|
+              `}
+            </div>
+            <h2 className="text-4xl font-bold uppercase">Your Journey Ends</h2>
+            <div className="space-y-2 text-xl">
+              <p>ROOMS SURVIVED: {roomsCleared}</p>
+              <p className="text-muted-foreground">The darkness claims another soul.</p>
+            </div>
           </div>
-        ) : (
-          <>
-            <div className="flex justify-center gap-4">
-              <Button
-                size="lg"
-                onClick={onPleaseWait}
-                className="btn-gradient px-8 py-4 text-lg font-semibold hover:-translate-y-0.5 transition-all duration-200"
-                aria-live="polite"
-              >
-                Please Wait
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
-              <div>
-                Time elapsed:{' '}
-                <span className="font-medium tabular-nums text-foreground">{formatted}</span>
-              </div>
-              <div>
-                Coins:{' '}
-                <span className="font-medium tabular-nums text-foreground">{coins}</span>
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={onReset}>
-                Reset
-              </Button>
-              <Button variant="outline" size="sm" onClick={onAddCoin}>
-                Add Coin
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <footer className="absolute bottom-8 text-center text-muted-foreground/80">
-        <p>Powered by Cloudflare</p>
-      </footer>
-
-      <Toaster richColors closeButton />
+          <Button 
+            onClick={reset}
+            className="px-12 py-8 bg-[#39ff14] text-black hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] rounded-none text-2xl font-bold transition-all transform hover:scale-110"
+          >
+            [ REBOOT SYSTEM ]
+          </Button>
+        </div>
+      )}
     </div>
-  )
+  );
 }
