@@ -89,12 +89,12 @@ export const LORE_FRAGMENTS = [
   "A rusted coin from an empire that never existed lies in the dust."
 ];
 export type OriginType = 'collector' | 'exile' | 'seeker';
-export const ORIGINS: Record<OriginType, { 
-  name: string, 
-  desc: string, 
-  item: string, 
+export const ORIGINS: Record<OriginType, {
+  name: string,
+  desc: string,
+  item: string,
   bonus: string,
-  statBonus: { strength?: number, agility?: number, manaRegen?: number } 
+  statBonus: { strength?: number, agility?: number, manaRegen?: number }
 }> = {
   collector: {
     name: 'Debt Collector',

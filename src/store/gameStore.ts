@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { 
-  ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES, 
-  LORE_FRAGMENTS, OriginType, ORIGINS, NarrativeEvent, NARRATIVE_EVENTS 
+import {
+  ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES,
+  LORE_FRAGMENTS, OriginType, ORIGINS, NarrativeEvent, NARRATIVE_EVENTS
 } from '@/lib/dictionaries';
 export type GameStatus = 'START' | 'ORIGIN_SELECT' | 'PLAYING' | 'EVENT' | 'GAMEOVER';
 export interface GridCell {
@@ -126,23 +126,30 @@ export const useGameStore = create<GameState>((set, get) => ({
       grid,
       position: { x: 2, y: 0 },
       currentAscii: ASCII_ART.DOORWAY,
+      roomsCleared: 0,
       logs: [`>>> ORIGIN: ${originData.name.toUpperCase()}`, `>>> ${originData.desc}`]
     });
   },
   move: (dx, dy) => {
-    const { position, grid, status, origin, mana, maxMana, allies } = get();
+    const { position, grid, status, origin, mana, maxMana, roomsCleared } = get();
     if (status !== 'PLAYING') return;
     const nx = position.x + dx;
     const ny = position.y + dy;
     if (nx < 0 || nx >= INITIAL_GRID_SIZE || ny < 0 || ny >= INITIAL_GRID_SIZE) return;
-    const newGrid = [...grid];
-    newGrid[ny][nx].explored = true;
-    const cell = newGrid[ny][nx];
+    const isFirstVisit = !grid[ny][nx].explored;
+    const newGrid = grid.map((row, y) => 
+      row.map((cell, x) => (x === nx && y === ny ? { ...cell, explored: true } : cell))
+    );
     const originData = origin ? ORIGINS[origin] : null;
     const manaRegen = originData?.statBonus.manaRegen || 1;
     const newMana = Math.min(maxMana, mana + manaRegen);
-    set({ position: { x: nx, y: ny }, grid: newGrid, mana: newMana });
-    // Enter Cell Logic
+    set({ 
+      position: { x: nx, y: ny }, 
+      grid: newGrid, 
+      mana: newMana,
+      roomsCleared: isFirstVisit ? roomsCleared + 1 : roomsCleared 
+    });
+    const cell = newGrid[ny][nx];
     const { theme, floor, addLog, playerMaxHp, playerHp } = get();
     if (cell.type === 'combat' || cell.type === 'boss') {
       const themeData = THEMES[theme];
@@ -192,19 +199,26 @@ export const useGameStore = create<GameState>((set, get) => ({
     }, 1000);
   },
   attack: () => {
-    const { currentEncounter, strength, triggerRoll, addLog, playerHp, defenseActive, agility, allies } = get();
+    const { currentEncounter, strength, triggerRoll, addLog, playerHp, defenseActive, agility, allies, roomsCleared } = get();
     if (!currentEncounter || get().isRolling) return;
     triggerRoll('ATTACK', (roll) => {
-      let damage = Math.floor((roll / 20) * 10) + strength;
+      let critMult = roll === 20 ? 1.5 : 1.0;
+      let damage = Math.floor(((roll / 20) * 10 + strength) * critMult);
       if (allies.automaton) {
         damage += 3;
         addLog(`> ALLY: THE AUTOMATON FIRES A BOLT! (+3 DMG)`);
       }
       const newEnemyHp = currentEncounter.hp - damage;
-      addLog(`> ATTACK: ROLLED ${roll} + ${strength} STR = ${damage} DMG.`);
+      addLog(`> ATTACK: ROLLED ${roll} + ${strength} STR ${roll === 20 ? '(CRIT!)' : ''} = ${damage} DMG.`);
       if (newEnemyHp <= 0) {
         addLog(`* VICTORY: THE FOE DISSOLVES.`);
-        set({ currentEncounter: null, currentAscii: ASCII_ART.VOID });
+        const isBoss = currentEncounter.name === 'ABYSSAL OVERSEER';
+        set({ 
+          currentEncounter: null, 
+          currentAscii: isBoss ? ASCII_ART.VOID : ASCII_ART.VOID,
+          roomsCleared: isBoss ? roomsCleared + 10 : roomsCleared 
+        });
+        if (isBoss) addLog(`+ CONQUEST: THE OVERSEER IS VANQUISHED. YOU ASCEND TO LEGEND.`);
       } else {
         const enemyDmgBase = Math.floor(Math.random() * 5) + 2;
         const agiBonus = defenseActive ? Math.floor(Math.random() * 4) + agility : 0;
@@ -214,12 +228,21 @@ export const useGameStore = create<GameState>((set, get) => ({
         if (newPlayerHp <= 0) {
           set({ status: 'GAMEOVER', playerHp: 0, currentAscii: ASCII_ART.GAMEOVER });
         } else {
-          set({ currentEncounter: { ...currentEncounter, hp: newEnemyHp }, playerHp: newPlayerHp, defenseActive: false });
+          set({ 
+            currentEncounter: { ...currentEncounter, hp: newEnemyHp }, 
+            playerHp: newPlayerHp, 
+            defenseActive: false 
+          });
         }
       }
     });
   },
-  defend: () => { if (!get().isRolling) { set({ defenseActive: true }); get().addLog(`> BRACING FOR IMPACT...`); } },
+  defend: () => { 
+    if (!get().isRolling) { 
+      set({ defenseActive: true }); 
+      get().addLog(`> BRACING FOR IMPACT...`); 
+    } 
+  },
   useSkill: (skillId) => {
     const { mana, currentEncounter, playerHp, playerMaxHp, triggerRoll, addLog } = get();
     if (!currentEncounter || get().isRolling) return;
@@ -272,7 +295,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   reset: () => set({
     status: 'START',
     playerHp: 20,
+    playerMaxHp: 20,
     mana: 10,
+    maxMana: 20,
+    strength: 3,
+    agility: 2,
     roomsCleared: 0,
     floor: 1,
     logs: ['>>> REBOOTING...'],
@@ -281,6 +308,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     origin: null,
     inventory: [],
     allies: { automaton: false },
-    position: { x: 2, y: 0 }
+    position: { x: 2, y: 0 },
+    restUsedOnFloor: false,
+    currentAscii: ASCII_ART.VOID
   })
 }));

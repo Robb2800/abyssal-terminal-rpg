@@ -36,6 +36,7 @@ export function Console() {
     if (log.startsWith('+')) return <span className="text-yellow-400 font-bold">{log}</span>;
     if (log.startsWith('!')) return <span className="text-red-500 text-glow font-black">{log}</span>;
     if (log.startsWith('?')) return <span className="text-orange-400 italic">{log}</span>;
+    if (log.startsWith('*')) return <span className="text-green-400 font-black tracking-widest">{log}</span>;
     return <span>{log}</span>;
   };
   return (
@@ -66,7 +67,7 @@ export function Console() {
               <Button
                 key={choice.id}
                 onClick={() => resolveEvent(choice.id)}
-                className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-16 flex flex-col justify-center"
+                className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-16 flex flex-col justify-center transition-all active:scale-95"
               >
                 <span className="font-bold">{choice.text}</span>
                 <span className="text-[10px] opacity-60 uppercase">{choice.consequence}</span>
@@ -82,14 +83,14 @@ export function Console() {
             <Button
               disabled={isRolling}
               onClick={attack}
-              className="bg-[#39ff14] text-black hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase"
+              className="bg-[#39ff14] text-black hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase transition-all"
             >
               [ ATTACK ]
             </Button>
             <Button
               disabled={isRolling}
               onClick={defend}
-              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase"
+              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase transition-all"
             >
               [ DEFEND ]
             </Button>
@@ -97,7 +98,7 @@ export function Console() {
               <DropdownMenuTrigger asChild>
                 <Button
                   disabled={isRolling}
-                  className="bg-blue-900 text-white hover:bg-blue-600 border-2 border-blue-600 rounded-none h-12 font-bold uppercase flex gap-2"
+                  className="bg-blue-900 text-white hover:bg-blue-600 border-2 border-blue-600 rounded-none h-12 font-bold uppercase flex gap-2 transition-all"
                 >
                   <Zap size={16} /> [ SKILLS ] <ChevronUp size={16} />
                 </Button>
@@ -114,37 +115,37 @@ export function Console() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button disabled className="bg-black text-[#39ff14]/20 border-2 border-[#39ff14]/10 rounded-none h-12 font-bold uppercase">
-              [ FOCKED ]
+            <Button disabled className="bg-black text-[#39ff14]/20 border-2 border-[#39ff14]/10 rounded-none h-12 font-bold uppercase cursor-not-allowed">
+              [ LOCKED ]
             </Button>
           </>
         ) : (
           <>
-            {/* D-Pad Movement */}
-            <div className="grid grid-cols-3 gap-1 md:col-span-1">
+            {/* D-Pad Movement Control Panel */}
+            <div className="grid grid-cols-3 gap-1 md:col-span-1 border border-[#39ff14]/20 p-1 bg-black/50">
               <div />
-              <Button onClick={() => move(0, 1)} disabled={isRolling || pos.y === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0"><ArrowUp size={16}/></Button>
+              <Button onClick={() => move(0, -1)} disabled={isRolling || pos.y === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowUp size={16}/></Button>
               <div />
-              <Button onClick={() => move(-1, 0)} disabled={isRolling || pos.x === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0"><ArrowLeft size={16}/></Button>
-              <Button onClick={() => move(0, -1)} disabled={isRolling || pos.y === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0"><ArrowDown size={16}/></Button>
-              <Button onClick={() => move(1, 0)} disabled={isRolling || pos.x === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0"><ArrowRight size={16}/></Button>
+              <Button onClick={() => move(-1, 0)} disabled={isRolling || pos.x === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowLeft size={16}/></Button>
+              <Button onClick={() => move(0, 1)} disabled={isRolling || pos.y === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowDown size={16}/></Button>
+              <Button onClick={() => move(1, 0)} disabled={isRolling || pos.x === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowRight size={16}/></Button>
             </div>
             <Button
               disabled={isRolling}
               onClick={searchRoom}
-              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase"
+              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase transition-all"
             >
-              [ SEARCH ROOM ]
+              [ SEARCH ]
             </Button>
             <Button
               disabled={isRolling || restUsedOnFloor}
               onClick={rest}
-              className="bg-black text-yellow-400 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-black rounded-none h-12 font-bold uppercase"
+              className="bg-black text-yellow-400 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-black rounded-none h-12 font-bold uppercase transition-all"
             >
               [ REST ]
             </Button>
-            <div className="hidden md:flex items-center justify-center border-2 border-[#39ff14]/20 text-[10px] uppercase font-bold text-center opacity-40">
-              NAVIGATION<br/>ACTIVE
+            <div className="hidden md:flex items-center justify-center border-2 border-[#39ff14]/20 text-[10px] uppercase font-bold text-center opacity-40 leading-tight">
+              GRID NAVIGATION<br/>PROTOCOL ACTIVE
             </div>
           </>
         )}
