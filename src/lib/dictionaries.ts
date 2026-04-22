@@ -56,7 +56,7 @@ export const THEMES: Record<GameTheme, { enemies: string[], rooms: string[] }> =
   },
   prison: {
     enemies: ['Rust-Iron Jailer', 'Chain-Rattle Specter', 'Starved Prisoner', 'Executioner Drone'],
-    rooms: ['Rusty bars and cold floors.', 'The echo of distant screams.', 'A cell that hasn't been opened in years.', 'The scent of iron and misery.']
+    rooms: ['Rusty bars and cold floors.', 'The echo of distant screams.', 'A cell that hasn\'t been opened in years.', 'The scent of iron and misery.']
   },
   void: {
     enemies: ['Entropy Fractal', 'Memory Eater', 'Silent Whisper', 'Null Pointer'],
