@@ -1,6 +1,14 @@
 import { create } from 'zustand';
-import { ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES, LORE_FRAGMENTS } from '@/lib/dictionaries';
-export type GameStatus = 'START' | 'PLAYING' | 'GAMEOVER';
+import { 
+  ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES, 
+  LORE_FRAGMENTS, OriginType, ORIGINS, NarrativeEvent, NARRATIVE_EVENTS 
+} from '@/lib/dictionaries';
+export type GameStatus = 'START' | 'ORIGIN_SELECT' | 'PLAYING' | 'EVENT' | 'GAMEOVER';
+export interface GridCell {
+  type: 'combat' | 'treasure' | 'empty' | 'event' | 'boss';
+  explored: boolean;
+  eventId?: string;
+}
 interface Encounter {
   name: string;
   hp: number;
@@ -12,6 +20,9 @@ interface GameState {
   status: GameStatus;
   themeInput: string;
   theme: GameTheme;
+  origin: OriginType | null;
+  inventory: string[];
+  allies: { automaton: boolean };
   floor: number;
   playerHp: number;
   playerMaxHp: number;
@@ -23,8 +34,12 @@ interface GameState {
   restUsedOnFloor: boolean;
   logs: string[];
   currentEncounter: Encounter | null;
+  currentEvent: NarrativeEvent | null;
   currentAscii: string;
   defenseActive: boolean;
+  // Grid System
+  grid: GridCell[][];
+  position: { x: number, y: number };
   // Roll System
   isRolling: boolean;
   lastRoll: number;
@@ -32,20 +47,49 @@ interface GameState {
   // Actions
   setThemeInput: (input: string) => void;
   startGame: () => void;
-  nextRoom: () => void;
+  selectOrigin: (origin: OriginType) => void;
+  move: (dx: number, dy: number) => void;
   triggerRoll: (label: string, callback: (roll: number) => void) => void;
   attack: () => void;
   defend: () => void;
   useSkill: (skillId: 'siphon' | 'analyze' | 'smoke') => void;
   searchRoom: () => void;
   rest: () => void;
+  resolveEvent: (choiceId: string) => void;
   addLog: (msg: string) => void;
   reset: () => void;
 }
+const INITIAL_GRID_SIZE = 5;
+const createProceduralGrid = (): GridCell[][] => {
+  const grid: GridCell[][] = [];
+  for (let y = 0; y < INITIAL_GRID_SIZE; y++) {
+    const row: GridCell[] = [];
+    for (let x = 0; x < INITIAL_GRID_SIZE; x++) {
+      const rng = Math.random();
+      let type: GridCell['type'] = 'empty';
+      let eventId: string | undefined;
+      if (rng < 0.3) type = 'combat';
+      else if (rng < 0.45) type = 'treasure';
+      else if (rng < 0.6) {
+        type = 'event';
+        eventId = NARRATIVE_EVENTS[Math.floor(Math.random() * NARRATIVE_EVENTS.length)].id;
+      }
+      row.push({ type, explored: false, eventId });
+    }
+    grid.push(row);
+  }
+  // Fixed Start and Boss
+  grid[0][2] = { type: 'empty', explored: true }; // Start
+  grid[4][4] = { type: 'boss', explored: false }; // Final challenge
+  return grid;
+};
 export const useGameStore = create<GameState>((set, get) => ({
   status: 'START',
   themeInput: '',
   theme: 'void',
+  origin: null,
+  inventory: [],
+  allies: { automaton: false },
   floor: 1,
   playerHp: 20,
   playerMaxHp: 20,
@@ -57,31 +101,85 @@ export const useGameStore = create<GameState>((set, get) => ({
   restUsedOnFloor: false,
   logs: ['>>> SYSTEM INITIALIZED...', '>>> AWAITING SEED INPUT...'],
   currentEncounter: null,
+  currentEvent: null,
   currentAscii: ASCII_ART.VOID,
   defenseActive: false,
   isRolling: false,
   lastRoll: 0,
   rollLabel: '',
+  grid: [],
+  position: { x: 2, y: 0 },
   setThemeInput: (input) => set({ themeInput: input }),
   startGame: () => {
-    const { themeInput } = get();
-    const theme = getThemeData(themeInput);
+    const theme = getThemeData(get().themeInput);
+    set({ status: 'ORIGIN_SELECT', theme });
+  },
+  selectOrigin: (originType) => {
+    const originData = ORIGINS[originType];
+    const grid = createProceduralGrid();
     set({
       status: 'PLAYING',
-      theme,
-      floor: 1,
-      logs: [`>>> ENTERING THE ABYSS: ${theme.toUpperCase()}`, '>>> DARKNESS ENVELOPS YOU.'],
-      playerHp: 20,
-      playerMaxHp: 20,
-      mana: 10,
-      maxMana: 20,
-      strength: 3,
-      agility: 2,
-      roomsCleared: 0,
-      restUsedOnFloor: false,
-      currentEncounter: null,
-      currentAscii: ASCII_ART.DOORWAY
+      origin: originType,
+      inventory: [originData.item],
+      strength: 3 + (originData.statBonus.strength || 0),
+      agility: 2 + (originData.statBonus.agility || 0),
+      grid,
+      position: { x: 2, y: 0 },
+      currentAscii: ASCII_ART.DOORWAY,
+      logs: [`>>> ORIGIN: ${originData.name.toUpperCase()}`, `>>> ${originData.desc}`]
     });
+  },
+  move: (dx, dy) => {
+    const { position, grid, status, origin, mana, maxMana, allies } = get();
+    if (status !== 'PLAYING') return;
+    const nx = position.x + dx;
+    const ny = position.y + dy;
+    if (nx < 0 || nx >= INITIAL_GRID_SIZE || ny < 0 || ny >= INITIAL_GRID_SIZE) return;
+    const newGrid = [...grid];
+    newGrid[ny][nx].explored = true;
+    const cell = newGrid[ny][nx];
+    const originData = origin ? ORIGINS[origin] : null;
+    const manaRegen = originData?.statBonus.manaRegen || 1;
+    const newMana = Math.min(maxMana, mana + manaRegen);
+    set({ position: { x: nx, y: ny }, grid: newGrid, mana: newMana });
+    // Enter Cell Logic
+    const { theme, floor, addLog, playerMaxHp, playerHp } = get();
+    if (cell.type === 'combat' || cell.type === 'boss') {
+      const themeData = THEMES[theme];
+      const name = cell.type === 'boss' ? 'ABYSSAL OVERSEER' : themeData.enemies[Math.floor(Math.random() * themeData.enemies.length)];
+      const hpMult = cell.type === 'boss' ? 5 : 1;
+      set({
+        currentEncounter: {
+          name,
+          hp: (10 + (floor * 5)) * hpMult,
+          maxHp: (10 + (floor * 5)) * hpMult,
+          nextMove: ENEMY_MOVES[name]?.[0] || 'Strike',
+          revealed: false
+        },
+        currentAscii: ASCII_ART.SKULL
+      });
+      addLog(`! ENCOUNTER: A ${name.toUpperCase()} BLOCKS YOUR PATH.`);
+    } else if (cell.type === 'treasure') {
+      set({ playerHp: Math.min(playerMaxHp, playerHp + 5), currentAscii: ASCII_ART.CHEST });
+      addLog(`+ TREASURE: A VIAL OF GLOWING FLUID RESTORES YOUR HEALTH.`);
+    } else if (cell.type === 'event' && cell.eventId) {
+      const event = NARRATIVE_EVENTS.find(e => e.id === cell.eventId);
+      if (event) {
+        set({ status: 'EVENT', currentEvent: event, currentAscii: ASCII_ART.EVENT });
+      }
+    } else {
+      set({ currentAscii: ASCII_ART.DOORWAY });
+      addLog(`- EMPTY: THE SILENCE IS DEAFENING.`);
+    }
+  },
+  resolveEvent: (choiceId) => {
+    const { currentEvent } = get();
+    if (!currentEvent) return;
+    const choice = currentEvent.choices.find(c => c.id === choiceId);
+    if (!choice) return;
+    const updates = choice.effect(get());
+    set({ ...updates, status: 'PLAYING', currentEvent: null, currentAscii: ASCII_ART.DOORWAY });
+    get().addLog(`+ DECISION: ${choice.consequence}`);
   },
   addLog: (msg) => set((state) => ({ logs: [...state.logs, msg] })),
   triggerRoll: (label, callback) => {
@@ -90,165 +188,86 @@ export const useGameStore = create<GameState>((set, get) => ({
       const roll = Math.floor(Math.random() * 20) + 1;
       set({ isRolling: false, lastRoll: roll });
       callback(roll);
-      // Auto-clear the result display after a delay for cleaner UI
-      setTimeout(() => {
-        if (get().lastRoll === roll) {
-          set({ lastRoll: 0 });
-        }
-      }, 2500);
+      setTimeout(() => { if (get().lastRoll === roll) set({ lastRoll: 0 }); }, 2500);
     }, 1000);
   },
-  nextRoom: () => {
-    const { theme, roomsCleared, addLog, mana, maxMana } = get();
-    const newRoomsCleared = roomsCleared + 1;
-    const newFloor = Math.floor(newRoomsCleared / 5) + 1;
-    const prevFloor = Math.floor(roomsCleared / 5) + 1;
-    const newMana = Math.min(maxMana, mana + 3);
-    if (newFloor > prevFloor) {
-      addLog(`>>> DESCENDING TO FLOOR ${newFloor}...`);
-      set({ restUsedOnFloor: false });
-    }
-    const rng = Math.random();
-    if (rng < 0.5) {
-      const themeData = THEMES[theme];
-      const enemyName = themeData.enemies[Math.floor(Math.random() * themeData.enemies.length)];
-      const moves = ENEMY_MOVES[enemyName] || ['Generic Strike'];
-      set({
-        currentEncounter: { 
-          name: enemyName, 
-          hp: 10 + (newFloor * 5), 
-          maxHp: 10 + (newFloor * 5),
-          nextMove: moves[Math.floor(Math.random() * moves.length)],
-          revealed: false
-        },
-        currentAscii: ASCII_ART.SKULL,
-        mana: newMana
-      });
-      addLog(`! ENCOUNTER: A ${enemyName.toUpperCase()} LURKS HERE.`);
-    } else if (rng < 0.75) {
-      set({
-        playerHp: Math.min(get().playerMaxHp, get().playerHp + 5),
-        currentAscii: ASCII_ART.CHEST,
-        currentEncounter: null,
-        mana: newMana
-      });
-      addLog(`+ TREASURE: YOU FIND A RESTORATIVE VIAL. HP RESTORED.`);
-    } else {
-      const themeData = THEMES[theme];
-      const desc = themeData.rooms[Math.floor(Math.random() * themeData.rooms.length)];
-      set({ currentAscii: ASCII_ART.DOORWAY, currentEncounter: null, mana: newMana });
-      addLog(`- EMPTY: ${desc}`);
-    }
-    set({ roomsCleared: newRoomsCleared, floor: newFloor });
-  },
   attack: () => {
-    const { currentEncounter, strength, triggerRoll, addLog, playerHp, defenseActive, agility } = get();
+    const { currentEncounter, strength, triggerRoll, addLog, playerHp, defenseActive, agility, allies } = get();
     if (!currentEncounter || get().isRolling) return;
     triggerRoll('ATTACK', (roll) => {
-      const damage = Math.floor((roll / 20) * 10) + strength;
+      let damage = Math.floor((roll / 20) * 10) + strength;
+      if (allies.automaton) {
+        damage += 3;
+        addLog(`> ALLY: THE AUTOMATON FIRES A BOLT! (+3 DMG)`);
+      }
       const newEnemyHp = currentEncounter.hp - damage;
       addLog(`> ATTACK: ROLLED ${roll} + ${strength} STR = ${damage} DMG.`);
       if (newEnemyHp <= 0) {
-        addLog(`* VICTORY: THE FOE DISSOLVES INTO ASH.`);
+        addLog(`* VICTORY: THE FOE DISSOLVES.`);
         set({ currentEncounter: null, currentAscii: ASCII_ART.VOID });
       } else {
         const enemyDmgBase = Math.floor(Math.random() * 5) + 2;
         const agiBonus = defenseActive ? Math.floor(Math.random() * 4) + agility : 0;
         const finalDmg = Math.max(0, (defenseActive ? Math.floor(enemyDmgBase / 2) : enemyDmgBase) - agiBonus);
         const newPlayerHp = playerHp - finalDmg;
-        addLog(`< ${currentEncounter.name.toUpperCase()} USES ${currentEncounter.nextMove.toUpperCase()} FOR ${finalDmg} DMG.`);
+        addLog(`< ${currentEncounter.name.toUpperCase()} DEALS ${finalDmg} DMG.`);
         if (newPlayerHp <= 0) {
           set({ status: 'GAMEOVER', playerHp: 0, currentAscii: ASCII_ART.GAMEOVER });
-          addLog(`!!! FATAL: YOUR SOUL HAS BEEN EXTINGUISHED.`);
         } else {
-          set({
-            currentEncounter: { ...currentEncounter, hp: newEnemyHp },
-            playerHp: newPlayerHp,
-            defenseActive: false
-          });
+          set({ currentEncounter: { ...currentEncounter, hp: newEnemyHp }, playerHp: newPlayerHp, defenseActive: false });
         }
       }
     });
   },
-  defend: () => {
-    if (get().isRolling) return;
-    set({ defenseActive: true });
-    get().addLog(`> YOU BRACE FOR THE IMPACT. (AGI BONUS ACTIVE)`);
-  },
+  defend: () => { if (!get().isRolling) { set({ defenseActive: true }); get().addLog(`> BRACING FOR IMPACT...`); } },
   useSkill: (skillId) => {
-    const { mana, currentEncounter, playerHp, playerMaxHp, strength, agility, triggerRoll, addLog } = get();
+    const { mana, currentEncounter, playerHp, playerMaxHp, triggerRoll, addLog } = get();
     if (!currentEncounter || get().isRolling) return;
     if (skillId === 'siphon') {
-      if (mana < 4) { addLog(`? INSUFFICIENT MANA`); return; }
+      if (mana < 4) return;
       set({ mana: mana - 4 });
       triggerRoll('SIPHON', (roll) => {
         const dmg = Math.floor((roll / 20) * 8) + 2;
-        addLog(`> SIPHON: ROLLED ${roll}. DRAINED ${dmg} HP FROM FOE.`);
         const newEnemyHp = currentEncounter.hp - dmg;
         const newPlayerHp = Math.min(playerMaxHp, playerHp + dmg);
-        if (newEnemyHp <= 0) {
-          set({ currentEncounter: null, currentAscii: ASCII_ART.VOID, playerHp: newPlayerHp });
-          addLog(`* VICTORY: THE FOE IS TOTALLY CONSUMED.`);
-        } else {
-          set({ currentEncounter: { ...currentEncounter, hp: newEnemyHp }, playerHp: newPlayerHp });
-        }
+        set({ currentEncounter: newEnemyHp <= 0 ? null : { ...currentEncounter, hp: newEnemyHp }, playerHp: newPlayerHp });
+        addLog(`> SIPHON: DRAINED ${dmg} HP.`);
       });
     } else if (skillId === 'analyze') {
-      if (mana < 2) { addLog(`? INSUFFICIENT MANA`); return; }
+      if (mana < 2) return;
       set({ mana: mana - 2, currentEncounter: { ...currentEncounter, revealed: true } });
-      addLog(`> ANALYZE: FOE VULNERABILITIES EXPOSED.`);
+      addLog(`> ANALYZE: WEAKNESSES REVEALED.`);
     } else if (skillId === 'smoke') {
-      if (mana < 6) { addLog(`? INSUFFICIENT MANA`); return; }
+      if (mana < 6) return;
       set({ mana: mana - 6 });
       triggerRoll('ESCAPE', (roll) => {
-        const total = roll + agility;
-        if (total >= 12) {
-          addLog(`> ESCAPE: ROLLED ${roll} + ${agility} AGI. YOU VANISH IN SMOKE.`);
+        if (roll + get().agility >= 12) {
           set({ currentEncounter: null, currentAscii: ASCII_ART.DOORWAY });
+          addLog(`> ESCAPE: YOU VANISH.`);
         } else {
-          addLog(`> FAIL: ROLLED ${roll} + ${agility} AGI. THE SMOKE CLEAR TOO SOON.`);
-          const enemyDmg = (Math.floor(Math.random() * 5) + 2) * 2;
-          const newPlayerHp = playerHp - enemyDmg;
-          addLog(`< CRITICAL STRIKE! ${currentEncounter.name.toUpperCase()} HITS FOR ${enemyDmg} DMG.`);
-          if (newPlayerHp <= 0) set({ status: 'GAMEOVER', playerHp: 0 });
-          else set({ playerHp: newPlayerHp });
+          addLog(`> FAIL: ESCAPE FAILED.`);
         }
       });
     }
   },
   searchRoom: () => {
     const { agility, triggerRoll, addLog, strength } = get();
-    if (get().isRolling) return;
     triggerRoll('SEARCH', (roll) => {
-      const total = roll + agility;
-      if (total >= 15) {
-        const rng = Math.random();
-        if (rng < 0.3) {
+      if (roll + agility >= 15) {
+        if (Math.random() < 0.3) {
           set({ strength: strength + 1 });
-          addLog(`+ EMPOWERED: FOUND AN ANCIENT WHETSTONE. +1 STR.`);
+          addLog(`+ EMPOWERED: +1 STR.`);
         } else {
-          const lore = LORE_FRAGMENTS[Math.floor(Math.random() * LORE_FRAGMENTS.length)];
-          addLog(`+ LORE: ${lore}`);
+          addLog(`+ LORE: ${LORE_FRAGMENTS[Math.floor(Math.random() * LORE_FRAGMENTS.length)]}`);
         }
-      } else {
-        addLog(`- SEARCH: YOU FIND ONLY DUST AND DESPAIR.`);
-      }
+      } else addLog(`- SEARCH: NOTHING FOUND.`);
     });
   },
   rest: () => {
-    const { restUsedOnFloor, playerHp, playerMaxHp, addLog, theme } = get();
-    if (restUsedOnFloor) { addLog(`? ALREADY RESTED ON THIS FLOOR.`); return; }
-    const heal = Math.floor(playerMaxHp * 0.5);
-    set({ playerHp: Math.min(playerMaxHp, playerHp + heal), restUsedOnFloor: true });
-    addLog(`+ REST: YOU RECOVER SOME STRENGTH. (+${heal} HP)`);
-    if (Math.random() < 0.15) {
-      const enemyName = THEMES[theme].enemies[0];
-      set({
-        currentEncounter: { name: `Ambushing ${enemyName}`, hp: 10, maxHp: 10, nextMove: 'Surprise Strike', revealed: false },
-        currentAscii: ASCII_ART.SKULL
-      });
-      addLog(`! AMBUSH: YOUR SLUMBER IS INTERRUPTED!`);
-    }
+    const { restUsedOnFloor, playerHp, playerMaxHp, addLog } = get();
+    if (restUsedOnFloor) return;
+    set({ playerHp: Math.min(playerMaxHp, playerHp + 10), restUsedOnFloor: true });
+    addLog(`+ REST: RECOVERED STRENGTH.`);
   },
   reset: () => set({
     status: 'START',
@@ -256,10 +275,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     mana: 10,
     roomsCleared: 0,
     floor: 1,
-    logs: ['>>> SYSTEM REBOOTING...', '>>> AWAITING NEW SEED...'],
+    logs: ['>>> REBOOTING...'],
     currentEncounter: null,
-    themeInput: '',
-    lastRoll: 0,
-    isRolling: false
+    currentEvent: null,
+    origin: null,
+    inventory: [],
+    allies: { automaton: false },
+    position: { x: 2, y: 0 }
   })
 }));
