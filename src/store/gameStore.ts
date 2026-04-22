@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES } from '@/lib/dictionaries';
+import { ASCII_ART, THEMES, getThemeData, GameTheme, ENEMY_MOVES, LORE_FRAGMENTS } from '@/lib/dictionaries';
 export type GameStatus = 'START' | 'PLAYING' | 'GAMEOVER';
 interface Encounter {
   name: string;
@@ -85,11 +85,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   addLog: (msg) => set((state) => ({ logs: [...state.logs, msg] })),
   triggerRoll: (label, callback) => {
-    set({ isRolling: true, rollLabel: label });
+    set({ isRolling: true, rollLabel: label, lastRoll: 0 });
     setTimeout(() => {
       const roll = Math.floor(Math.random() * 20) + 1;
       set({ isRolling: false, lastRoll: roll });
       callback(roll);
+      // Auto-clear the result display after a delay for cleaner UI
+      setTimeout(() => {
+        if (get().lastRoll === roll) {
+          set({ lastRoll: 0 });
+        }
+      }, 2500);
     }, 1000);
   },
   nextRoom: () => {
@@ -168,8 +174,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (get().isRolling) return;
     set({ defenseActive: true });
     get().addLog(`> YOU BRACE FOR THE IMPACT. (AGI BONUS ACTIVE)`);
-    // Skip player turn, enemy attacks next interaction or automatically
-    // For simplicity in this engine, defend sets a flag for the NEXT enemy strike
   },
   useSkill: (skillId) => {
     const { mana, currentEncounter, playerHp, playerMaxHp, strength, agility, triggerRoll, addLog } = get();
@@ -223,7 +227,6 @@ export const useGameStore = create<GameState>((set, get) => ({
           set({ strength: strength + 1 });
           addLog(`+ EMPOWERED: FOUND AN ANCIENT WHETSTONE. +1 STR.`);
         } else {
-          const { LORE_FRAGMENTS } = require('@/lib/dictionaries');
           const lore = LORE_FRAGMENTS[Math.floor(Math.random() * LORE_FRAGMENTS.length)];
           addLog(`+ LORE: ${lore}`);
         }
@@ -255,6 +258,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     floor: 1,
     logs: ['>>> SYSTEM REBOOTING...', '>>> AWAITING NEW SEED...'],
     currentEncounter: null,
-    themeInput: ''
+    themeInput: '',
+    lastRoll: 0,
+    isRolling: false
   })
 }));

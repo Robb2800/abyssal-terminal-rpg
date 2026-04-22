@@ -17,7 +17,7 @@ export function Console() {
   const attack = useGameStore(s => s.attack);
   const defend = useGameStore(s => s.defend);
   const nextRoom = useGameStore(s => s.nextRoom);
-  const useSkill = useGameStore(s => s.useSkill);
+  const handleSkill = useGameStore(s => s.useSkill);
   const searchRoom = useGameStore(s => s.searchRoom);
   const rest = useGameStore(s => s.rest);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -76,21 +76,21 @@ export function Console() {
               <DropdownMenuContent align="end" className="bg-black border-2 border-blue-600 text-blue-400 rounded-none w-56 p-0 font-mono">
                 <DropdownMenuItem 
                   className="hover:bg-blue-600 hover:text-white rounded-none p-3 cursor-pointer border-b border-blue-600/30"
-                  onClick={() => useSkill('siphon')}
+                  onClick={() => handleSkill('siphon')}
                   disabled={mana < 4}
                 >
                   SIPHON LIFE (4 MP)
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="hover:bg-blue-600 hover:text-white rounded-none p-3 cursor-pointer border-b border-blue-600/30"
-                  onClick={() => useSkill('analyze')}
+                  onClick={() => handleSkill('analyze')}
                   disabled={mana < 2}
                 >
                   ANALYZE (2 MP)
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="hover:bg-blue-600 hover:text-white rounded-none p-3 cursor-pointer"
-                  onClick={() => useSkill('smoke')}
+                  onClick={() => handleSkill('smoke')}
                   disabled={mana < 6}
                 >
                   SMOKE BOMB (6 MP)
