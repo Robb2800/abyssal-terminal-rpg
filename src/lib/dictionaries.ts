@@ -50,6 +50,17 @@ export const ASCII_ART = {
     \\  ????  /
      '--  --'
         \\/
+  `,
+  BOSS: `
+      .--------.
+     / [][][]   \\
+    |  [I][I]    |
+    |    <      |
+    |  [====]   |
+     \\  '---'  /
+      '-------'
+     /|  CORE  |\\
+    /_|________|_\\
   `
 };
 export type GameTheme = 'library' | 'cavern' | 'prison' | 'void';
@@ -78,7 +89,13 @@ export const ENEMY_MOVES: Record<string, string[]> = {
   'Echoing Shadow': ['Sonic Screech', 'Mimic Strike', 'Dark Pulse'],
   'Rust-Iron Jailer': ['Chain Lash', 'Iron Lockdown', 'Rusty Puncture'],
   'Entropy Fractal': ['Geometric Void', 'Logic Loop', 'Chaos Beam'],
-  'Null Pointer': ['Reference Error', 'Memory Leak', 'Stack Overflow']
+  'Null Pointer': ['Reference Error', 'Memory Leak', 'Stack Overflow'],
+  'ABYSSAL OVERSEER': ['Market Crash', 'Logic Wipe', 'Subsidized Strike', 'Bailout Blast']
+};
+export const INTENT_TYPES = {
+  AGGRESSIVE: { label: 'AGGRESSIVE', color: 'text-red-500', modifier: 1.5 },
+  TACTICAL: { label: 'TACTICAL', color: 'text-blue-400', modifier: 1.0 },
+  DEFENSIVE: { label: 'DEFENSIVE', color: 'text-yellow-400', modifier: 0.5 }
 };
 export const LORE_FRAGMENTS = [
   "The walls hum with a frequency that makes your teeth ache.",
@@ -94,6 +111,8 @@ export const ORIGINS: Record<OriginType, {
   desc: string,
   item: string,
   bonus: string,
+  passive: string,
+  active: string,
   statBonus: { strength?: number, agility?: number, manaRegen?: number }
 }> = {
   collector: {
@@ -101,6 +120,8 @@ export const ORIGINS: Record<OriginType, {
     desc: 'I seek a reckoning for the debts unpaid by the stars.',
     item: 'Golden Compass',
     bonus: '+1 STR, Wealth Sense',
+    passive: 'Sense the Abyssal Core: Revealed mini-map icons.',
+    active: 'Market Re-Roll: Refresh current sector (1/floor).',
     statBonus: { strength: 1, manaRegen: 1 }
   },
   exile: {
@@ -108,6 +129,8 @@ export const ORIGINS: Record<OriginType, {
     desc: 'I seek a new throne in the ruins of the old world.',
     item: 'Sharpened Crown',
     bonus: '+1 AGI, Regal Presence',
+    passive: 'Eternal Reign: +2 Max HP per kill.',
+    active: 'Commanding Presence: Stun foe for 1 turn (3-turn CD).',
     statBonus: { agility: 1, manaRegen: 1 }
   },
   seeker: {
@@ -115,6 +138,8 @@ export const ORIGINS: Record<OriginType, {
     desc: 'I seek the fundamental truth hidden in the static.',
     item: 'Ancient Lens',
     bonus: '+2 MP Regen, True Sight',
+    passive: 'Hyper-Analysis: Searching sectors always succeeds.',
+    active: 'Quantum Sight: Reveal enemy HP and future moves.',
     statBonus: { manaRegen: 2 }
   }
 };
@@ -130,6 +155,23 @@ export interface NarrativeEvent {
   prose: string;
   choices: NarrativeChoice[];
 }
+export const ENDINGS = {
+  THRONE: {
+    title: 'THE NEW OVERSEER',
+    ascii: ASCII_ART.BOSS,
+    prose: 'You take the throne. The terminal flickers as your consciousness merges with the grid. The cycle continues, but you are now the one who watches.'
+  },
+  DESTRUCTION: {
+    title: 'THE END OF THE GRID',
+    ascii: ASCII_ART.VOID,
+    prose: 'The heart of the Market Maker shatters. The terminal screams as its reality dissolves into true void. You are free, even if there is nothing left to inhabit.'
+  },
+  ESCAPE: {
+    title: 'THE TRUE EXIT',
+    ascii: ASCII_ART.DOORWAY,
+    prose: 'Your relic reveals a frequency beyond the static. You step through a door that was never there. The terminal is just a memory now. You have ascended.'
+  }
+};
 export const NARRATIVE_EVENTS: NarrativeEvent[] = [
   {
     id: 'automaton',

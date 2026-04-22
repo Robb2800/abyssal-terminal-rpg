@@ -1,152 +1,87 @@
 import React, { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { ChevronUp, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronUp, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Skull } from 'lucide-react';
+import { ORIGINS } from '@/lib/dictionaries';
 export function Console() {
   const logs = useGameStore(s => s.logs);
   const currentEncounter = useGameStore(s => s.currentEncounter);
   const currentEvent = useGameStore(s => s.currentEvent);
-  const mana = useGameStore(s => s.mana);
   const isRolling = useGameStore(s => s.isRolling);
-  const restUsedOnFloor = useGameStore(s => s.restUsedOnFloor);
   const pos = useGameStore(s => s.position);
   const status = useGameStore(s => s.status);
+  const origin = useGameStore(s => s.origin);
+  const relicCooldown = useGameStore(s => s.relicCooldown);
+  const bossPhase = useGameStore(s => s.bossPhase);
   const attack = useGameStore(s => s.attack);
   const defend = useGameStore(s => s.defend);
-  const handleSkill = useGameStore(s => s.useSkill);
+  const useRelic = useGameStore(s => s.useRelic);
   const move = useGameStore(s => s.move);
   const searchRoom = useGameStore(s => s.searchRoom);
   const rest = useGameStore(s => s.rest);
   const resolveEvent = useGameStore(s => s.resolveEvent);
+  const resolveEnding = useGameStore(s => s.resolveEnding);
   const scrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs]);
-  const formatLog = (log: string) => {
-    if (log.startsWith('>')) return <span className="text-[#39ff14] font-bold">{log}</span>;
-    if (log.startsWith('<')) return <span className="text-red-400">{log}</span>;
-    if (log.startsWith('+')) return <span className="text-yellow-400 font-bold">{log}</span>;
-    if (log.startsWith('!')) return <span className="text-red-500 text-glow font-black">{log}</span>;
-    if (log.startsWith('?')) return <span className="text-orange-400 italic">{log}</span>;
-    if (log.startsWith('*')) return <span className="text-green-400 font-black tracking-widest">{log}</span>;
-    return <span>{log}</span>;
-  };
+  useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [logs]);
+  const originData = origin ? ORIGINS[origin] : null;
   return (
-    <div className="h-[40%] w-full flex flex-col bg-black p-4 md:px-8 md:py-6 overflow-hidden border-t-2 border-[#39ff14]/10">
-      {/* Logs Window */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-1 font-mono text-xs md:text-sm scrollbar-thin">
+    <div className="h-[40%] w-full flex flex-col bg-black p-4 overflow-hidden border-t-2 border-[#39ff14]/10">
+      <div className="flex-1 overflow-y-auto mb-4 font-mono text-xs scrollbar-thin">
         {logs.slice(-50).map((log, i) => (
-          <div key={i} className="animate-fade-in py-0.5">
-            <span className="opacity-20 mr-2">[{i.toString().padStart(3, '0')}]</span>
-            {formatLog(log)}
-          </div>
+          <div key={i} className="py-0.5"><span className="opacity-20 mr-2">[{i.toString().padStart(3, '0')}]</span>{log}</div>
         ))}
         <div ref={scrollRef} />
       </div>
-      {/* Narrative Event View */}
-      {status === 'EVENT' && currentEvent && (
-        <div className="absolute inset-0 z-20 bg-black/95 flex flex-col p-8 border-2 border-[#39ff14] m-4 animate-scale-in">
-          <div className="flex-1 overflow-y-auto space-y-4">
-            <h3 className="text-3xl font-black text-glow uppercase tracking-widest text-center border-b border-[#39ff14]/30 pb-4">
-              {currentEvent.title}
-            </h3>
-            <p className="text-lg leading-relaxed opacity-90 first-letter:text-4xl first-letter:font-bold first-letter:mr-2">
-              {currentEvent.prose}
-            </p>
+      {status === 'EVENT' && currentEncounter?.name === 'ABYSSAL OVERSEER' && bossPhase === 3 ? (
+        <div className="absolute inset-0 z-20 bg-black/95 flex flex-col p-8 border-2 border-[#39ff14] m-4">
+          <h3 className="text-3xl font-black text-glow text-center mb-6 uppercase">FINAL TRANSACTION</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button onClick={() => resolveEnding('THRONE')} className="h-24 bg-black border-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-black">
+              TAKE THE THRONE
+            </Button>
+            <Button onClick={() => resolveEnding('DESTRUCTION')} className="h-24 bg-black border-2 border-[#39ff14] text-[#39ff14] hover:bg-[#39ff14] hover:text-black">
+              DESTROY CORE
+            </Button>
+            <Button onClick={() => resolveEnding('ESCAPE')} className="h-24 bg-black border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-black">
+              TRUE ESCAPE
+            </Button>
           </div>
+        </div>
+      ) : status === 'EVENT' && currentEvent && (
+        <div className="absolute inset-0 z-20 bg-black/95 flex flex-col p-8 border-2 border-[#39ff14] m-4 animate-scale-in">
+          <h3 className="text-2xl font-black text-glow uppercase text-center mb-4">{currentEvent.title}</h3>
+          <p className="flex-1 text-sm leading-relaxed">{currentEvent.prose}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-            {currentEvent.choices.map((choice) => (
-              <Button
-                key={choice.id}
-                onClick={() => resolveEvent(choice.id)}
-                className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-16 flex flex-col justify-center transition-all active:scale-95"
-              >
-                <span className="font-bold">{choice.text}</span>
-                <span className="text-[10px] opacity-60 uppercase">{choice.consequence}</span>
+            {currentEvent.choices.map(c => (
+              <Button key={c.id} onClick={() => resolveEvent(c.id)} className="h-16 bg-black border-2 border-[#39ff14] text-[#39ff14] rounded-none flex flex-col hover:bg-[#39ff14] hover:text-black">
+                <span className="font-bold uppercase">{c.text}</span>
+                <span className="text-[8px] opacity-60">{c.consequence}</span>
               </Button>
             ))}
           </div>
         </div>
       )}
-      {/* Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#39ff14]/30">
         {currentEncounter ? (
           <>
-            <Button
-              disabled={isRolling}
-              onClick={attack}
-              className="bg-[#39ff14] text-black hover:bg-black hover:text-[#39ff14] border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase transition-all"
-            >
-              [ ATTACK ]
+            <Button onClick={attack} disabled={isRolling} className="bg-[#39ff14] text-black border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase hover:bg-black hover:text-[#39ff14]">[ ATTACK ]</Button>
+            <Button onClick={defend} disabled={isRolling} className="bg-black text-[#39ff14] border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase hover:bg-[#39ff14] hover:text-black">[ DEFEND ]</Button>
+            <Button onClick={useRelic} disabled={isRolling || relicCooldown > 0} className={cn("rounded-none h-12 font-bold uppercase border-2", relicCooldown > 0 ? "border-red-900 text-red-900 bg-black/50" : "border-blue-500 text-blue-500 bg-black hover:bg-blue-500 hover:text-white")}>
+              {relicCooldown > 0 ? `CD: ${relicCooldown}` : `[ ${originData?.item.toUpperCase() || 'RELIC'} ]`}
             </Button>
-            <Button
-              disabled={isRolling}
-              onClick={defend}
-              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase transition-all"
-            >
-              [ DEFEND ]
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  disabled={isRolling}
-                  className="bg-blue-900 text-white hover:bg-blue-600 border-2 border-blue-600 rounded-none h-12 font-bold uppercase flex gap-2 transition-all"
-                >
-                  <Zap size={16} /> [ SKILLS ] <ChevronUp size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-black border-2 border-blue-600 text-blue-400 rounded-none w-64 p-0 font-mono">
-                <DropdownMenuItem onClick={() => handleSkill('siphon')} disabled={mana < 4} className="hover:bg-blue-600 hover:text-white p-3 cursor-pointer">
-                  SIPHON LIFE (4 MP)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSkill('analyze')} disabled={mana < 2} className="hover:bg-blue-600 hover:text-white p-3 cursor-pointer">
-                  ANALYZE (2 MP)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSkill('smoke')} disabled={mana < 6} className="hover:bg-blue-600 hover:text-white p-3 cursor-pointer">
-                  SMOKE BOMB (6 MP)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button disabled className="bg-black text-[#39ff14]/20 border-2 border-[#39ff14]/10 rounded-none h-12 font-bold uppercase cursor-not-allowed">
-              [ LOCKED ]
-            </Button>
+            <Button disabled className="bg-black/20 text-[#39ff14]/20 border-2 border-[#39ff14]/10 rounded-none h-12 font-bold uppercase">[ LOCKED ]</Button>
           </>
         ) : (
           <>
-            {/* D-Pad Movement Control Panel */}
             <div className="grid grid-cols-3 gap-1 md:col-span-1 border border-[#39ff14]/20 p-1 bg-black/50">
-              <div />
-              <Button onClick={() => move(0, -1)} disabled={isRolling || pos.y === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowUp size={16}/></Button>
-              <div />
-              <Button onClick={() => move(-1, 0)} disabled={isRolling || pos.x === 0} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowLeft size={16}/></Button>
-              <Button onClick={() => move(0, 1)} disabled={isRolling || pos.y === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowDown size={16}/></Button>
-              <Button onClick={() => move(1, 0)} disabled={isRolling || pos.x === 4} className="h-10 bg-black border border-[#39ff14]/50 hover:bg-[#39ff14] hover:text-black p-0 transition-all"><ArrowRight size={16}/></Button>
+              <div/><Button onClick={() => move(0, -1)} disabled={isRolling || pos.y === 0} className="h-10 bg-black border border-[#39ff14]/50 p-0"><ArrowUp size={14}/></Button><div/>
+              <Button onClick={() => move(-1, 0)} disabled={isRolling || pos.x === 0} className="h-10 bg-black border border-[#39ff14]/50 p-0"><ArrowLeft size={14}/></Button>
+              <Button onClick={() => move(0, 1)} disabled={isRolling || pos.y === 4} className="h-10 bg-black border border-[#39ff14]/50 p-0"><ArrowDown size={14}/></Button>
+              <Button onClick={() => move(1, 0)} disabled={isRolling || pos.x === 4} className="h-10 bg-black border border-[#39ff14]/50 p-0"><ArrowRight size={14}/></Button>
             </div>
-            <Button
-              disabled={isRolling}
-              onClick={searchRoom}
-              className="bg-black text-[#39ff14] border-2 border-[#39ff14] hover:bg-[#39ff14] hover:text-black rounded-none h-12 font-bold uppercase transition-all"
-            >
-              [ SEARCH ]
-            </Button>
-            <Button
-              disabled={isRolling || restUsedOnFloor}
-              onClick={rest}
-              className="bg-black text-yellow-400 border-2 border-yellow-400 hover:bg-yellow-400 hover:text-black rounded-none h-12 font-bold uppercase transition-all"
-            >
-              [ REST ]
-            </Button>
-            <div className="hidden md:flex items-center justify-center border-2 border-[#39ff14]/20 text-[10px] uppercase font-bold text-center opacity-40 leading-tight">
-              GRID NAVIGATION<br/>PROTOCOL ACTIVE
-            </div>
+            <Button onClick={searchRoom} disabled={isRolling} className="bg-black text-[#39ff14] border-2 border-[#39ff14] rounded-none h-12 font-bold uppercase hover:bg-[#39ff14] hover:text-black">[ SEARCH ]</Button>
+            <Button onClick={rest} disabled={isRolling} className="bg-black text-yellow-400 border-2 border-yellow-400 rounded-none h-12 font-bold uppercase hover:bg-yellow-400 hover:text-black">[ REST ]</Button>
+            <Button onClick={useRelic} disabled={isRolling || relicCooldown > 0 || origin !== 'collector'} className={cn("rounded-none h-12 font-bold uppercase border-2", origin !== 'collector' ? "opacity-20 cursor-not-allowed" : "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white")}>[ RE-ROLL ]</Button>
           </>
         )}
       </div>
