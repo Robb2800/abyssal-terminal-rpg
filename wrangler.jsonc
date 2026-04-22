@@ -4,7 +4,7 @@
  */
  {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "abyssal-terminal-rpg-wpuhu1jov-vmxzbdv4j3f",
+	"name": "abyssal-terminal-rpg",
 	"main": "worker/index.ts",
 	"compatibility_date": "2025-04-24",
 	"assets": {
