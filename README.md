@@ -1,6 +1,6 @@
 # Abyssal Terminal RPG
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Robb2800/abyssal-terminal-rpg)
 
 A immersive terminal-style RPG experience built on Cloudflare Workers. Dive into the abyssal depths with a full-stack application featuring a React frontend powered by modern UI components and a performant Hono-based API backend.
 
@@ -71,7 +71,7 @@ bun deploy
 
 This builds the frontend assets and deploys the Worker. Your app will be live at `<your-worker>.<your-subdomain>.workers.dev`.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Robb2800/abyssal-terminal-rpg)
 
 **Customization**:
 - Update `wrangler.jsonc` for bindings (KV, DO, R2).
